@@ -15,6 +15,7 @@
 from __future__ import print_function
 
 import firebase_admin
+import json
 from firebase_admin import credentials
 from firebase_admin import db
 
@@ -92,7 +93,7 @@ def get_reference():
     # [END get_reference]
     print(ref.key)
 
-def set_value():
+def set_value(data):
     ref = db.reference('server/saving-data/fireblog')
 
     # [START set_value]
@@ -108,6 +109,11 @@ def set_value():
         }
     })
     # [END set_value]
+
+    # Allow passing None as a value
+    if data is None:
+        data = json.dumps(None)
+
 
 def set_child_value():
     ref = db.reference('server/saving-data/fireblog')
@@ -338,7 +344,7 @@ firebase_admin.initialize_app(cred, {
 })
 
 get_reference()
-set_value()
+set_value(None)
 set_child_value()
 update_child()
 update_children()
