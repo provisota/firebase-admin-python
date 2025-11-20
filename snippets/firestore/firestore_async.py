@@ -130,3 +130,53 @@ def firestore_async_client_with_asyncio_eventloop():
     loop.run_until_complete(asyncio.gather(*tasks))
     firebase_admin.delete_app(app)
     # [END firestore_async_client_with_asyncio_eventloop]
+
+# New functionality for testing Firestore security rules
+async def test_firestore_security_rules():
+    """
+    Test Firestore security rules using the Firestore emulator.
+    """
+    import firebase_admin
+    from firebase_admin import credentials
+    from firebase_admin import firestore_async
+
+    # Initialize the Firestore emulator
+    cred = credentials.ApplicationDefault()
+    firebase_admin.initialize_app(cred, {
+        'projectId': 'test-project',
+        'firestoreEmulatorHost': 'localhost:8080'
+    })
+
+    db = firestore_async.client()
+
+    # Load security rules (example rules)
+    rules = {
+        "rules": {
+            "users": {
+                "$user_id": {
+                    ".read": "$user_id === auth.uid",
+                    ".write": "$user_id === auth.uid"
+                }
+            }
+        }
+    }
+
+    # Example test: unauthenticated access
+    try:
+        doc_ref = db.collection('users').document('unauthorized_user')
+        await doc_ref.get()
+    except Exception as e:
+        print(f"Access denied as expected: {e}")
+
+    # Example test: authenticated access
+    # Simulate authenticated user
+    firebase_admin.initialize_app(cred, {
+        'projectId': 'test-project',
+        'firestoreEmulatorHost': 'localhost:8080',
+        'auth': {'uid': 'authorized_user'}
+    })
+
+    doc_ref = db.collection('users').document('authorized_user')
+    await doc_ref.set({"name": "Test User"})
+    doc = await doc_ref.get()
+    print(f"Access granted: {doc.to_dict()}")
