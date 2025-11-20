@@ -18,6 +18,7 @@ This module contains functions for creating and configuring authentication tenan
 Google Cloud Identity Platform (GCIP) instance.
 """
 
+import os
 import re
 import threading
 
@@ -232,7 +233,11 @@ class Tenant:
 class _TenantManagementService:
     """Firebase tenant management service."""
 
-    TENANT_MGT_URL = 'https://identitytoolkit.googleapis.com/v2'
+    TENANT_MGT_URL = (
+        f"http://{os.getenv('FIREBASE_TENANT_EMULATOR_HOST')}/identitytoolkit.googleapis.com/v2"
+        if os.getenv('FIREBASE_TENANT_EMULATOR_HOST')
+        else 'https://identitytoolkit.googleapis.com/v2'
+    )
 
     def __init__(self, app):
         credential = app.credential.get_credential()
