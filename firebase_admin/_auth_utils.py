@@ -431,7 +431,7 @@ _CODE_TO_EXC_TYPE = {
     'DUPLICATE_EMAIL': EmailAlreadyExistsError,
     'DUPLICATE_LOCAL_ID': UidAlreadyExistsError,
     'EMAIL_EXISTS': EmailAlreadyExistsError,
-    'EMAIL_NOT_FOUND': EmailNotFoundError,
+    'EMAIL_NOT_FOUND': UserNotFoundError,
     'INSUFFICIENT_PERMISSION': InsufficientPermissionError,
     'INVALID_DYNAMIC_LINK_DOMAIN': InvalidDynamicLinkDomainError,
     'INVALID_HOSTING_LINK_DOMAIN': InvalidHostingLinkDomainError,
