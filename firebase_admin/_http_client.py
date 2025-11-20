@@ -80,7 +80,9 @@ class HttpClient:
               None to disable timeouts (optional).
         """
         if credential:
+            auth_request = google_auth_requests.Request()
             self._session = transport.requests.AuthorizedSession(credential)
+            self._session.credentials.before_request = lambda *args, **kwargs: DEFAULT_RETRY_CONFIG
         elif session:
             self._session = session
         else:
