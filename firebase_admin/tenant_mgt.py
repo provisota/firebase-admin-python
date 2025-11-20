@@ -24,10 +24,10 @@ import threading
 import requests
 
 import firebase_admin
-from firebase_admin import auth
 from firebase_admin import _auth_utils
 from firebase_admin import _http_client
 from firebase_admin import _utils
+import firebase_admin.auth
 
 
 _TENANT_MGT_ATTRIBUTE = '_tenant_mgt'
@@ -254,7 +254,7 @@ class _TenantManagementService:
             if tenant_id in self.tenant_clients:
                 return self.tenant_clients[tenant_id]
 
-            client = auth.Client(self.app, tenant_id=tenant_id)
+            client = firebase_admin.auth.Client(self.app, tenant_id=tenant_id)
             self.tenant_clients[tenant_id] = client
             return  client
 
