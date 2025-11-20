@@ -309,7 +309,10 @@ class TaskQueue:
             del task.http_request['oidc_token']
         else:
             task.http_request['oidc_token'] = \
-                {'service_account_email': self._credential.service_account_email}
+                {'service_account_email': getattr(self._credential, 'service_account_email', None)}
+            if task.http_request['oidc_token']['service_account_email'] is None:
+                raise AttributeError(
+                    "'Credentials' object does not have 'service_account_email' attribute.")
         return task
 
 
