@@ -422,7 +422,7 @@ def list_users(page_token=None, max_results=_user_mgt.MAX_LIST_USERS_RESULTS, ap
     return client.list_users(page_token=page_token, max_results=max_results)
 
 
-def create_user(**kwargs): # pylint: disable=differing-param-doc
+def create_user(**kwargs):  # pylint: disable=differing-param-doc
     """Creates a new user account with the specified properties.
 
     Args:
@@ -447,7 +447,16 @@ def create_user(**kwargs): # pylint: disable=differing-param-doc
         ValueError: If the specified user properties are invalid.
         FirebaseError: If an error occurs while creating the user account.
     """
-    app = kwargs.pop('app', None)
+    # Check for existing user by email before creating a new user
+    email = kwargs.get('email')
+    if email:
+        try:
+            if client.get_user_by_email(email=email):
+                raise _auth_utils.EmailAlreadyExistsError(f"User with email {email} already exists.")
+        except _auth_utils.UserNotFoundError:
+            pass  # No user exists with the given email, safe to proceed
+    if email and client.get_user_by_email(email=email):
+        raise _auth_utils.EmailAlreadyExistsError(f"User with email {email} already exists.")
     client = _get_client(app)
     return client.create_user(**kwargs)
 
