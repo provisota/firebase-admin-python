@@ -132,9 +132,21 @@ class HttpClient:
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self.timeout
         kwargs.setdefault('headers', {}).update(METRICS_HEADERS)
-        resp = self._session.request(method, self.base_url + url, **kwargs)
-        resp.raise_for_status()
-        return resp
+
+        for attempt in range(2):  # Retry up to 2 times for transient auth errors
+            try:
+                resp = self._session.request(method, self.base_url + url, **kwargs)
+                resp.raise_for_status()
+                return resp
+            except requests.exceptions.HTTPError as http_err:
+                if resp.status_code in [400, 401, 403] and attempt == 0:
+                    logger.warning(
+                        "Transient auth error detected (status %d). Retrying...",
+                        resp.status_code
+                    )
+                    self._session.credentials.refresh(google_auth_requests.Request())
+                else:
+                    raise
 
     def headers(self, method, url, **kwargs):
         resp = self.request(method, url, **kwargs)
