@@ -4,7 +4,7 @@
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#      http://www.apache.org/licenses/LICENSE-2.0
+#     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -118,15 +118,31 @@ def firestore_async_client_with_asyncio_eventloop():
         })
         print("Done adding user!")
 
-    # Another corutine with secondary tasks we want to complete.
+    # Another coroutine with secondary tasks we want to complete.
     async def while_waiting():
         print("Start other tasks...")
         await asyncio.sleep(2)
         print("Finished with other tasks!")
 
-    # Initialize an eventloop to execute tasks until completion.
+    # Initialize an event loop to execute tasks until completion.
     loop = asyncio.get_event_loop()
     tasks = [add_data(), while_waiting()]
     loop.run_until_complete(asyncio.gather(*tasks))
     firebase_admin.delete_app(app)
     # [END firestore_async_client_with_asyncio_eventloop]
+
+# DNS resolution fix for Firestore client
+import grpc
+from google.api_core.grpc_helpers import create_channel
+
+def configure_dns_resolution():
+    """Configures DNS resolution for Firestore client."""
+    channel = create_channel(
+        target="firestore.googleapis.com",
+        options=[
+            ("grpc.enable_http_proxy", 0),
+            ("grpc.keepalive_time_ms", 10000),
+            ("grpc.keepalive_timeout_ms", 5000),
+        ]
+    )
+    return channel
