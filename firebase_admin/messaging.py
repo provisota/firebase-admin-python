@@ -37,7 +37,6 @@ logger = logging.getLogger(__name__)
 
 _MESSAGING_ATTRIBUTE = '_messaging'
 
-
 __all__ = [
     'AndroidConfig',
     'AndroidFCMOptions',
@@ -75,7 +74,6 @@ __all__ = [
     'unsubscribe_from_topic',
 ]
 
-
 AndroidConfig = _messaging_utils.AndroidConfig
 AndroidFCMOptions = _messaging_utils.AndroidFCMOptions
 AndroidNotification = _messaging_utils.AndroidNotification
@@ -99,6 +97,11 @@ QuotaExceededError = _messaging_utils.QuotaExceededError
 SenderIdMismatchError = _messaging_utils.SenderIdMismatchError
 ThirdPartyAuthError = _messaging_utils.ThirdPartyAuthError
 UnregisteredError = _messaging_utils.UnregisteredError
+
+class InvalidRegistrationIdError(exceptions.FirebaseError):
+    """Raised when the provided registration ID is invalid."""
+    def __init__(self, message: str, cause: Optional[Exception] = None, http_response: Optional[Any] = None):
+        super().__init__(message, cause=cause, http_response=http_response)
 
 
 def _get_messaging_service(app: Optional[App]) -> _MessagingService:
@@ -388,6 +391,7 @@ class _MessagingService:
         'SENDER_ID_MISMATCH': SenderIdMismatchError,
         'THIRD_PARTY_AUTH_ERROR': ThirdPartyAuthError,
         'UNREGISTERED': UnregisteredError,
+        'INVALID_REGISTRATION': InvalidRegistrationIdError,
     }
 
     def __init__(self, app: App) -> None:
@@ -572,7 +576,7 @@ class _MessagingService:
         appropriate."""
         exc_type = cls._build_fcm_error(error_dict)
         # pylint: disable=not-callable
-        return exc_type(message, cause=error, http_response=error.response) if exc_type else None
+        return exc_type(message=message, cause=error, http_response=error.response) if exc_type else None
 
     @classmethod
     def _build_fcm_error_httpx(
@@ -604,4 +608,6 @@ class _MessagingService:
             if detail.get('@type') == 'type.googleapis.com/google.firebase.fcm.v1.FcmError':
                 fcm_code = detail.get('errorCode')
                 break
+        if fcm_code == 'INVALID_REGISTRATION':
+            return InvalidRegistrationIdError
         return _MessagingService.FCM_ERROR_TYPES.get(fcm_code) if fcm_code else None
