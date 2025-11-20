@@ -15,6 +15,7 @@
 from __future__ import print_function
 
 import firebase_admin
+import json
 from firebase_admin import credentials
 from firebase_admin import db
 
@@ -32,7 +33,7 @@ def authenticate_with_admin_privileges():
         'databaseURL': 'https://databaseName.firebaseio.com'
     })
 
-    # As an admin, the app has access to read and write all data, regradless of Security Rules
+    # As an admin, the app has access to read and write all data, regardless of Security Rules
     ref = db.reference('restricted_access/secret_document')
     print(ref.get())
     # [END authenticate_with_admin_privileges]
@@ -92,21 +93,14 @@ def get_reference():
     # [END get_reference]
     print(ref.key)
 
-def set_value():
+def set_value(data=None):
     ref = db.reference('server/saving-data/fireblog')
 
     # [START set_value]
     users_ref = ref.child('users')
-    users_ref.set({
-        'alanisawesome': {
-            'date_of_birth': 'June 23, 1912',
-            'full_name': 'Alan Turing'
-        },
-        'gracehop': {
-            'date_of_birth': 'December 9, 1906',
-            'full_name': 'Grace Hopper'
-        }
-    })
+    if data is None:
+        data = json.dumps(None)
+    users_ref.set(data)
     # [END set_value]
 
 def set_child_value():
