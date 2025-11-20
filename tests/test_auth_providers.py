@@ -19,7 +19,7 @@ import json
 import pytest
 
 import firebase_admin
-from firebase_admin import auth
+import firebase_admin.auth
 from firebase_admin import exceptions
 from firebase_admin import _utils
 from tests import testutils
@@ -62,7 +62,7 @@ def user_mgt_app(request):
 
 
 def _instrument_provider_mgt(app, status, payload):
-    client = auth._get_client(app)
+    client = firebase_admin.auth._get_client(app)
     provider_manager = client._provider_manager
     recorder = []
     provider_manager.http_client.session.mount(
@@ -108,14 +108,14 @@ class TestOIDCProviderConfig:
     @pytest.mark.parametrize('provider_id', INVALID_PROVIDER_IDS + ['saml.provider'])
     def test_get_invalid_provider_id(self, user_mgt_app, provider_id):
         with pytest.raises(ValueError) as excinfo:
-            auth.get_oidc_provider_config(provider_id, app=user_mgt_app)
+            firebase_admin.auth.get_oidc_provider_config(provider_id, app=user_mgt_app)
 
         assert str(excinfo.value).startswith('Invalid OIDC provider ID')
 
     def test_get(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, OIDC_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.get_oidc_provider_config('oidc.provider', app=user_mgt_app)
+        provider_config = firebase_admin.auth.get_oidc_provider_config('oidc.provider', app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
         assert len(recorder) == 1
@@ -138,12 +138,12 @@ class TestOIDCProviderConfig:
         options = dict(self.VALID_CREATE_OPTIONS)
         options.update(invalid_opts)
         with pytest.raises(ValueError):
-            auth.create_oidc_provider_config(**options, app=user_mgt_app)
+            firebase_admin.auth.create_oidc_provider_config(**options, app=user_mgt_app)
 
     def test_create(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, OIDC_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.create_oidc_provider_config(
+        provider_config = firebase_admin.auth.create_oidc_provider_config(
             **self.VALID_CREATE_OPTIONS, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
@@ -167,7 +167,7 @@ class TestOIDCProviderConfig:
         del want['clientSecret']
         del want['responseType']
 
-        provider_config = auth.create_oidc_provider_config(**options, app=user_mgt_app)
+        provider_config = firebase_admin.auth.create_oidc_provider_config(**options, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
         assert len(recorder) == 1
@@ -191,7 +191,7 @@ class TestOIDCProviderConfig:
         }
         del want['clientSecret']
 
-        provider_config = auth.create_oidc_provider_config(**options, app=user_mgt_app)
+        provider_config = firebase_admin.auth.create_oidc_provider_config(**options, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
         assert len(recorder) == 1
@@ -217,12 +217,12 @@ class TestOIDCProviderConfig:
         options = {'provider_id': 'oidc.provider'}
         options.update(invalid_opts)
         with pytest.raises(ValueError):
-            auth.update_oidc_provider_config(**options, app=user_mgt_app)
+            firebase_admin.auth.update_oidc_provider_config(**options, app=user_mgt_app)
 
     def test_update(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, OIDC_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.update_oidc_provider_config(
+        provider_config = firebase_admin.auth.update_oidc_provider_config(
             **self.VALID_CREATE_OPTIONS, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
@@ -231,14 +231,14 @@ class TestOIDCProviderConfig:
                 'responseType.code', 'responseType.idToken']
         _assert_request(recorder[0], 'PATCH',
                         f'{USER_MGT_URLS["PREFIX"]}/oauthIdpConfigs/oidc.provider?'
-                        f'updateMask={",".join(mask)}')
+                        f'updateMask={".".join(mask)}')
         got = json.loads(recorder[0].body.decode())
         assert got == self.OIDC_CONFIG_REQUEST
 
     def test_update_minimal(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, OIDC_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.update_oidc_provider_config(
+        provider_config = firebase_admin.auth.update_oidc_provider_config(
             'oidc.provider', display_name='oidcProviderName', app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
@@ -252,8 +252,8 @@ class TestOIDCProviderConfig:
     def test_update_empty_values(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, OIDC_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.update_oidc_provider_config(
-            'oidc.provider', display_name=auth.DELETE_ATTRIBUTE, enabled=False,
+        provider_config = firebase_admin.auth.update_oidc_provider_config(
+            'oidc.provider', display_name=firebase_admin.auth.DELETE_ATTRIBUTE, enabled=False,
             id_token_response_type=False, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
@@ -261,21 +261,21 @@ class TestOIDCProviderConfig:
         mask = ['displayName', 'enabled', 'responseType.idToken']
         _assert_request(recorder[0], 'PATCH',
                         f'{USER_MGT_URLS["PREFIX"]}/oauthIdpConfigs/oidc.provider?'
-                        f'updateMask={",".join(mask)}')
+                        f'updateMask={".".join(mask)}')
         got = json.loads(recorder[0].body.decode())
         assert got == {'displayName': None, 'enabled': False, 'responseType': {'idToken': False}}
 
     @pytest.mark.parametrize('provider_id', INVALID_PROVIDER_IDS + ['saml.provider'])
     def test_delete_invalid_provider_id(self, user_mgt_app, provider_id):
         with pytest.raises(ValueError) as excinfo:
-            auth.delete_oidc_provider_config(provider_id, app=user_mgt_app)
+            firebase_admin.auth.delete_oidc_provider_config(provider_id, app=user_mgt_app)
 
         assert str(excinfo.value).startswith('Invalid OIDC provider ID')
 
     def test_delete(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, '{}')
 
-        auth.delete_oidc_provider_config('oidc.provider', app=user_mgt_app)
+        firebase_admin.auth.delete_oidc_provider_config('oidc.provider', app=user_mgt_app)
 
         assert len(recorder) == 1
         _assert_request(recorder[0], 'DELETE',
@@ -284,16 +284,16 @@ class TestOIDCProviderConfig:
     @pytest.mark.parametrize('arg', [None, 'foo', [], {}, 0, -1, 101, False])
     def test_invalid_max_results(self, user_mgt_app, arg):
         with pytest.raises(ValueError):
-            auth.list_oidc_provider_configs(max_results=arg, app=user_mgt_app)
+            firebase_admin.auth.list_oidc_provider_configs(max_results=arg, app=user_mgt_app)
 
     @pytest.mark.parametrize('arg', ['', [], {}, 0, -1, 101, False])
     def test_invalid_page_token(self, user_mgt_app, arg):
         with pytest.raises(ValueError):
-            auth.list_oidc_provider_configs(page_token=arg, app=user_mgt_app)
+            firebase_admin.auth.list_oidc_provider_configs(page_token=arg, app=user_mgt_app)
 
     def test_list_single_page(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, LIST_OIDC_PROVIDER_CONFIGS_RESPONSE)
-        page = auth.list_oidc_provider_configs(app=user_mgt_app)
+        page = firebase_admin.auth.list_oidc_provider_configs(app=user_mgt_app)
 
         self._assert_page(page)
         provider_configs = list(config for config in page.iterate_all())
@@ -313,7 +313,7 @@ class TestOIDCProviderConfig:
             'nextPageToken': 'token'
         }
         recorder = _instrument_provider_mgt(user_mgt_app, 200, json.dumps(response))
-        page = auth.list_oidc_provider_configs(max_results=10, app=user_mgt_app)
+        page = firebase_admin.auth.list_oidc_provider_configs(max_results=10, app=user_mgt_app)
 
         self._assert_page(page, next_page_token='token')
         assert len(recorder) == 1
@@ -340,7 +340,7 @@ class TestOIDCProviderConfig:
             'nextPageToken': 'token'
         }
         recorder = _instrument_provider_mgt(user_mgt_app, 200, json.dumps(response))
-        page = auth.list_oidc_provider_configs(app=user_mgt_app)
+        page = firebase_admin.auth.list_oidc_provider_configs(app=user_mgt_app)
         iterator = page.iterate_all()
 
         for index in range(2):
@@ -366,31 +366,31 @@ class TestOIDCProviderConfig:
     def test_list_empty_response(self, user_mgt_app):
         response = {'oauthIdpConfigs': []}
         _instrument_provider_mgt(user_mgt_app, 200, json.dumps(response))
-        page = auth.list_oidc_provider_configs(app=user_mgt_app)
+        page = firebase_admin.auth.list_oidc_provider_configs(app=user_mgt_app)
         assert len(page.provider_configs) == 0
         provider_configs = list(config for config in page.iterate_all())
         assert len(provider_configs) == 0
 
     def test_list_error(self, user_mgt_app):
         _instrument_provider_mgt(user_mgt_app, 500, '{"error":"test"}')
-        with pytest.raises(exceptions.InternalError) as excinfo:
-            auth.list_oidc_provider_configs(app=user_mgt_app)
+        with pytest.raises(firebase_admin.exceptions.InternalError) as excinfo:
+            firebase_admin.auth.list_oidc_provider_configs(app=user_mgt_app)
         assert str(excinfo.value) == 'Unexpected error response: {"error":"test"}'
 
     def test_config_not_found(self, user_mgt_app):
         _instrument_provider_mgt(user_mgt_app, 500, CONFIG_NOT_FOUND_RESPONSE)
 
-        with pytest.raises(auth.ConfigurationNotFoundError) as excinfo:
-            auth.get_oidc_provider_config('oidc.provider', app=user_mgt_app)
+        with pytest.raises(firebase_admin.auth.ConfigurationNotFoundError) as excinfo:
+            firebase_admin.auth.get_oidc_provider_config('oidc.provider', app=user_mgt_app)
 
         error_msg = 'No auth provider found for the given identifier (CONFIGURATION_NOT_FOUND).'
-        assert excinfo.value.code == exceptions.NOT_FOUND
+        assert excinfo.value.code == firebase_admin.exceptions.NOT_FOUND
         assert str(excinfo.value) == error_msg
         assert excinfo.value.http_response is not None
         assert excinfo.value.cause is not None
 
     def _assert_provider_config(self, provider_config, want_id='oidc.provider'):
-        assert isinstance(provider_config, auth.OIDCProviderConfig)
+        assert isinstance(provider_config, firebase_admin.auth.OIDCProviderConfig)
         assert provider_config.provider_id == want_id
         assert provider_config.display_name == 'oidcProviderName'
         assert provider_config.enabled is True
@@ -398,7 +398,7 @@ class TestOIDCProviderConfig:
         assert provider_config.client_id == 'CLIENT_ID'
 
     def _assert_page(self, page, count=2, start=0, next_page_token=''):
-        assert isinstance(page, auth.ListProviderConfigsPage)
+        assert isinstance(page, firebase_admin.auth.ListProviderConfigsPage)
         index = start
         assert len(page.provider_configs) == count
         for provider_config in page.provider_configs:
@@ -444,14 +444,14 @@ class TestSAMLProviderConfig:
     @pytest.mark.parametrize('provider_id', INVALID_PROVIDER_IDS + ['oidc.provider'])
     def test_get_invalid_provider_id(self, user_mgt_app, provider_id):
         with pytest.raises(ValueError) as excinfo:
-            auth.get_saml_provider_config(provider_id, app=user_mgt_app)
+            firebase_admin.auth.get_saml_provider_config(provider_id, app=user_mgt_app)
 
         assert str(excinfo.value).startswith('Invalid SAML provider ID')
 
     def test_get(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, SAML_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.get_saml_provider_config('saml.provider', app=user_mgt_app)
+        provider_config = firebase_admin.auth.get_saml_provider_config('saml.provider', app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
         assert len(recorder) == 1
@@ -473,12 +473,12 @@ class TestSAMLProviderConfig:
         options = dict(self.VALID_CREATE_OPTIONS)
         options.update(invalid_opts)
         with pytest.raises(ValueError):
-            auth.create_saml_provider_config(**options, app=user_mgt_app)
+            firebase_admin.auth.create_saml_provider_config(**options, app=user_mgt_app)
 
     def test_create(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, SAML_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.create_saml_provider_config(
+        provider_config = firebase_admin.auth.create_saml_provider_config(
             **self.VALID_CREATE_OPTIONS, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
@@ -498,7 +498,7 @@ class TestSAMLProviderConfig:
         del want['displayName']
         del want['enabled']
 
-        provider_config = auth.create_saml_provider_config(**options, app=user_mgt_app)
+        provider_config = firebase_admin.auth.create_saml_provider_config(**options, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
         assert len(recorder) == 1
@@ -517,7 +517,7 @@ class TestSAMLProviderConfig:
         want['displayName'] = ''
         want['enabled'] = False
 
-        provider_config = auth.create_saml_provider_config(**options, app=user_mgt_app)
+        provider_config = firebase_admin.auth.create_saml_provider_config(**options, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
         assert len(recorder) == 1
@@ -543,12 +543,12 @@ class TestSAMLProviderConfig:
         options = {'provider_id': 'saml.provider'}
         options.update(invalid_opts)
         with pytest.raises(ValueError):
-            auth.update_saml_provider_config(**options, app=user_mgt_app)
+            firebase_admin.auth.update_saml_provider_config(**options, app=user_mgt_app)
 
     def test_update(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, SAML_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.update_saml_provider_config(
+        provider_config = firebase_admin.auth.update_saml_provider_config(
             **self.VALID_CREATE_OPTIONS, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
@@ -559,14 +559,14 @@ class TestSAMLProviderConfig:
         ]
         _assert_request(recorder[0], 'PATCH',
                         f'{USER_MGT_URLS["PREFIX"]}/inboundSamlConfigs/saml.provider?'
-                        f'updateMask={",".join(mask)}')
+                        f'updateMask={".".join(mask)}')
         got = json.loads(recorder[0].body.decode())
         assert got == self.SAML_CONFIG_REQUEST
 
     def test_update_minimal(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, SAML_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.update_saml_provider_config(
+        provider_config = firebase_admin.auth.update_saml_provider_config(
             'saml.provider', display_name='samlProviderName', app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
@@ -580,29 +580,29 @@ class TestSAMLProviderConfig:
     def test_update_empty_values(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, SAML_PROVIDER_CONFIG_RESPONSE)
 
-        provider_config = auth.update_saml_provider_config(
-            'saml.provider', display_name=auth.DELETE_ATTRIBUTE, enabled=False, app=user_mgt_app)
+        provider_config = firebase_admin.auth.update_saml_provider_config(
+            'saml.provider', display_name=firebase_admin.auth.DELETE_ATTRIBUTE, enabled=False, app=user_mgt_app)
 
         self._assert_provider_config(provider_config)
         assert len(recorder) == 1
         mask = ['displayName', 'enabled']
         _assert_request(recorder[0], 'PATCH',
                         f'{USER_MGT_URLS["PREFIX"]}/inboundSamlConfigs/saml.provider?'
-                        f'updateMask={",".join(mask)}')
+                        f'updateMask={".".join(mask)}')
         got = json.loads(recorder[0].body.decode())
         assert got == {'displayName': None, 'enabled': False}
 
     @pytest.mark.parametrize('provider_id', INVALID_PROVIDER_IDS + ['oidc.provider'])
     def test_delete_invalid_provider_id(self, user_mgt_app, provider_id):
         with pytest.raises(ValueError) as excinfo:
-            auth.delete_saml_provider_config(provider_id, app=user_mgt_app)
+            firebase_admin.auth.delete_saml_provider_config(provider_id, app=user_mgt_app)
 
         assert str(excinfo.value).startswith('Invalid SAML provider ID')
 
     def test_delete(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, '{}')
 
-        auth.delete_saml_provider_config('saml.provider', app=user_mgt_app)
+        firebase_admin.auth.delete_saml_provider_config('saml.provider', app=user_mgt_app)
 
         assert len(recorder) == 1
         _assert_request(
@@ -611,11 +611,11 @@ class TestSAMLProviderConfig:
     def test_config_not_found(self, user_mgt_app):
         _instrument_provider_mgt(user_mgt_app, 500, CONFIG_NOT_FOUND_RESPONSE)
 
-        with pytest.raises(auth.ConfigurationNotFoundError) as excinfo:
-            auth.get_saml_provider_config('saml.provider', app=user_mgt_app)
+        with pytest.raises(firebase_admin.auth.ConfigurationNotFoundError) as excinfo:
+            firebase_admin.auth.get_saml_provider_config('saml.provider', app=user_mgt_app)
 
         error_msg = 'No auth provider found for the given identifier (CONFIGURATION_NOT_FOUND).'
-        assert excinfo.value.code == exceptions.NOT_FOUND
+        assert excinfo.value.code == firebase_admin.exceptions.NOT_FOUND
         assert str(excinfo.value) == error_msg
         assert excinfo.value.http_response is not None
         assert excinfo.value.cause is not None
@@ -623,16 +623,16 @@ class TestSAMLProviderConfig:
     @pytest.mark.parametrize('arg', [None, 'foo', [], {}, 0, -1, 101, False])
     def test_invalid_max_results(self, user_mgt_app, arg):
         with pytest.raises(ValueError):
-            auth.list_saml_provider_configs(max_results=arg, app=user_mgt_app)
+            firebase_admin.auth.list_saml_provider_configs(max_results=arg, app=user_mgt_app)
 
     @pytest.mark.parametrize('arg', ['', [], {}, 0, -1, 101, False])
     def test_invalid_page_token(self, user_mgt_app, arg):
         with pytest.raises(ValueError):
-            auth.list_saml_provider_configs(page_token=arg, app=user_mgt_app)
+            firebase_admin.auth.list_saml_provider_configs(page_token=arg, app=user_mgt_app)
 
     def test_list_single_page(self, user_mgt_app):
         recorder = _instrument_provider_mgt(user_mgt_app, 200, LIST_SAML_PROVIDER_CONFIGS_RESPONSE)
-        page = auth.list_saml_provider_configs(app=user_mgt_app)
+        page = firebase_admin.auth.list_saml_provider_configs(app=user_mgt_app)
 
         self._assert_page(page)
         provider_configs = list(config for config in page.iterate_all())
@@ -652,7 +652,7 @@ class TestSAMLProviderConfig:
             'nextPageToken': 'token'
         }
         recorder = _instrument_provider_mgt(user_mgt_app, 200, json.dumps(response))
-        page = auth.list_saml_provider_configs(max_results=10, app=user_mgt_app)
+        page = firebase_admin.auth.list_saml_provider_configs(max_results=10, app=user_mgt_app)
 
         self._assert_page(page, next_page_token='token')
         assert len(recorder) == 1
@@ -680,7 +680,7 @@ class TestSAMLProviderConfig:
             'nextPageToken': 'token'
         }
         recorder = _instrument_provider_mgt(user_mgt_app, 200, json.dumps(response))
-        page = auth.list_saml_provider_configs(app=user_mgt_app)
+        page = firebase_admin.auth.list_saml_provider_configs(app=user_mgt_app)
         iterator = page.iterate_all()
 
         for index in range(2):
@@ -707,19 +707,19 @@ class TestSAMLProviderConfig:
     def test_list_empty_response(self, user_mgt_app):
         response = {'inboundSamlConfigs': []}
         _instrument_provider_mgt(user_mgt_app, 200, json.dumps(response))
-        page = auth.list_saml_provider_configs(app=user_mgt_app)
+        page = firebase_admin.auth.list_saml_provider_configs(app=user_mgt_app)
         assert len(page.provider_configs) == 0
         provider_configs = list(config for config in page.iterate_all())
         assert len(provider_configs) == 0
 
     def test_list_error(self, user_mgt_app):
         _instrument_provider_mgt(user_mgt_app, 500, '{"error":"test"}')
-        with pytest.raises(exceptions.InternalError) as excinfo:
-            auth.list_saml_provider_configs(app=user_mgt_app)
+        with pytest.raises(firebase_admin.exceptions.InternalError) as excinfo:
+            firebase_admin.auth.list_saml_provider_configs(app=user_mgt_app)
         assert str(excinfo.value) == 'Unexpected error response: {"error":"test"}'
 
     def _assert_provider_config(self, provider_config, want_id='saml.provider'):
-        assert isinstance(provider_config, auth.SAMLProviderConfig)
+        assert isinstance(provider_config, firebase_admin.auth.SAMLProviderConfig)
         assert provider_config.provider_id == want_id
         assert provider_config.display_name == 'samlProviderName'
         assert provider_config.enabled is True
@@ -730,7 +730,7 @@ class TestSAMLProviderConfig:
         assert provider_config.callback_url == 'https://projectId.firebaseapp.com/__/auth/handler'
 
     def _assert_page(self, page, count=2, start=0, next_page_token=''):
-        assert isinstance(page, auth.ListProviderConfigsPage)
+        assert isinstance(page, firebase_admin.auth.ListProviderConfigsPage)
         index = start
         assert len(page.provider_configs) == count
         for provider_config in page.provider_configs:

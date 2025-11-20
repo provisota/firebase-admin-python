@@ -27,6 +27,7 @@ from firebase_admin import _token_gen
 from firebase_admin import _user_import
 from firebase_admin import _user_mgt
 from firebase_admin import _utils
+import requests
 
 
 _AUTH_ATTRIBUTE = '_auth'
@@ -109,6 +110,8 @@ __all__ = [
     'verify_id_token',
     'verify_session_cookie',
 ]
+
+
 
 ActionCodeSettings = _user_mgt.ActionCodeSettings
 CertificateFetchError = _token_gen.CertificateFetchError
@@ -287,6 +290,30 @@ def verify_session_cookie(session_cookie, check_revoked=False, app=None, clock_s
     return verified_claims
 
 
+def refresh_access_token(refresh_token: str) -> dict:
+    """
+    Refreshes an expired access token using a refresh token.
+
+    Args:
+        refresh_token (str): The refresh token obtained during initial authentication.
+
+    Returns:
+        dict: A dictionary containing the new access token and its expiration time.
+
+    Raises:
+        ValueError: If the refresh token is invalid or the request fails.
+    """
+    url = "https://securetoken.googleapis.com/v1/token"
+    payload = {
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token
+    }
+
+    response = requests.post(url, data=payload)
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise ValueError(f"Failed to refresh token: {response.text}")
 def revoke_refresh_tokens(uid, app=None):
     """Revokes all refresh tokens for an existing user.
 
