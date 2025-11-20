@@ -232,6 +232,8 @@ class RefreshToken(Base):
 
 
 def _is_file_path(path):
+    if isinstance(path, dict):
+        return False
     try:
         pathlib.Path(path)
         return True
