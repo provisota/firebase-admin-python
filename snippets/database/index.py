@@ -17,6 +17,7 @@ from __future__ import print_function
 import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import db
+from firebase_admin import firestore
 
 def authenticate_with_admin_privileges():
     # [START authenticate_with_admin_privileges]
@@ -328,6 +329,21 @@ def complex_query():
         print('The stegosaurus is the shortest dino')
     # [END complex_query]
 
+def init_firestore_client():
+    """
+    Initializes the Firebase Admin SDK and returns a Firestore client.
+
+    Returns:
+        firestore.Client: A Firestore client instance for database interactions.
+    """
+    # Fetch the service account key JSON file contents
+    cred = credentials.Certificate('path/to/serviceAccountKey.json')
+
+    # Initialize the Firebase Admin SDK
+    firebase_admin.initialize_app(cred)
+
+    # Create and return a Firestore client
+    return firestore.client()
 
 service_account = 'path/to/serviceAccount.json'
 database_url = 'https://databaseName.firebaseio.com'
