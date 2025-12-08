@@ -1,3 +1,4 @@
+
 # Copyright 2024 Google Inc.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +34,7 @@ import firebase_admin
 from firebase_admin import App
 from firebase_admin import _http_client
 from firebase_admin import _utils
+from firebase_admin import exceptions
 
 _FUNCTIONS_ATTRIBUTE = '_functions'
 
@@ -169,7 +171,8 @@ class TaskQueue:
         task = self._validate_task_options(task_data, self._resource, opts)
         service_url = self._get_url(self._resource, _CLOUD_TASKS_API_URL_FORMAT)
         task_payload = self._update_task_payload(task, self._resource, self._extension_id)
-        try:
+
+        def _do_enqueue():
             resp = self._http_client.body(
                 'post',
                 url=service_url,
@@ -180,8 +183,33 @@ class TaskQueue:
             task_resource = \
                 self._parse_resource_name(task_name, f'queues/{self._resource.resource_id}/tasks')
             return task_resource.resource_id
+
+        try:
+            return _do_enqueue()
         except requests.exceptions.RequestException as error:
-            raise _FunctionsService.handle_functions_error(error)
+            # On cold starts, the first request might fail due to a stale or missing auth token.
+            # The underlying AuthorizedSession should refresh the token on failure.
+            # Retry once for auth-related errors (400, 401, 403) to allow token refresh.
+            firebase_error = _FunctionsService.handle_functions_error(error)
+            if isinstance(firebase_error, exceptions.FirebaseError) and \
+               firebase_error.http_response and firebase_error.http_response.status_code in (400, 401, 403):
+                try:
+                    return _do_enqueue()
+                except requests.exceptions.RequestException:
+                    # If retry also fails, proceed to re-raise the original error,
+                    # but wrapped as InvalidArgumentError or NotFoundError as per requirements.
+                    pass
+            
+            # After potential retry, or if retry was not applicable,
+            # re-raise the error as InvalidArgumentError or NotFoundError.
+            if isinstance(firebase_error, exceptions.FirebaseError) and \
+               firebase_error.http_response and firebase_error.http_response.status_code == 404:
+                raise exceptions.NotFoundError(
+                    f'Cloud Tasks queue "projects/{self._resource.project_id}/locations/{self._resource.location_id}/queues/{self._resource.resource_id}" not found.') from firebase_error
+            
+            # For all other errors, including 400/401/403 after retry, raise InvalidArgumentError.
+            raise exceptions.InvalidArgumentError(
+                f'Failed to enqueue task: {firebase_error.message}') from firebase_error
 
     def delete(self, task_id: str) -> None:
         """Deletes an enqueued task if it has not yet started.
