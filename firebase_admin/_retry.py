@@ -1,4 +1,4 @@
-# Copyright 2025 Google Inc.
+# Licensed under the Apache License, Version 2.0 (the "License");
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -44,7 +44,7 @@ class HttpxRetry:
             max_retries: int = 10,
             status_forcelist: Optional[List[int]] = None,
             backoff_factor: float = 0,
-            backoff_max: float = DEFAULT_BACKOFF_MAX,
+            backoff_max: float = HttpxRetry.DEFAULT_BACKOFF_MAX,
             backoff_jitter: float = 0,
             history: Optional[List[Tuple[
                 httpx.Request,
@@ -160,7 +160,7 @@ class HttpxRetry:
 class HttpxRetryTransport(httpx.AsyncBaseTransport):
     """HTTPX transport with retry logic."""
 
-    DEFAULT_RETRY = HttpxRetry(max_retries=4, status_forcelist=[500, 503], backoff_factor=0.5)
+    DEFAULT_RETRY = HttpxRetry(max_retries=4, status_forcelist=[500, 503, 400], backoff_factor=0.5) # Added 400 to handle transient auth errors on cold start for Cloud Functions task_queue.enqueue()
 
     def __init__(self, retry: HttpxRetry = DEFAULT_RETRY, **kwargs: Any) -> None:
         self._retry = retry
@@ -204,6 +204,7 @@ class HttpxRetryTransport(httpx.AsyncBaseTransport):
             except httpx.HTTPError as err:
                 logger.debug('Received error: %r', err)
                 error = err
+
 
             if response and not retry.is_retryable_response(response):
                 return response
