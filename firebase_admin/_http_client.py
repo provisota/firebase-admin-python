@@ -19,6 +19,8 @@ This module provides utilities for making HTTP calls using the requests library.
 
 from __future__ import annotations
 import logging
+import time
+import asyncio
 from typing import Any, Dict, Generator, Optional, Tuple, Union
 import httpx
 import requests.adapters
@@ -45,7 +47,6 @@ DEFAULT_RETRY_CONFIG = retry.Retry(
 
 DEFAULT_HTTPX_RETRY_CONFIG = HttpxRetry(
     max_retries=4, status_forcelist=[500, 503], backoff_factor=0.5)
-
 
 DEFAULT_TIMEOUT_SECONDS = 120
 
@@ -132,9 +133,26 @@ class HttpClient:
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self.timeout
         kwargs.setdefault('headers', {}).update(METRICS_HEADERS)
-        resp = self._session.request(method, self.base_url + url, **kwargs)
-        resp.raise_for_status()
-        return resp
+
+        retries = 0
+        max_retries = 4
+        backoff_factor = 0.5
+
+        while retries <= max_retries:
+            try:
+                resp = self._session.request(method, self.base_url + url, **kwargs)
+                resp.raise_for_status()
+                return resp
+            except requests.exceptions.HTTPError as http_err:
+                if resp.status_code in [400, 401, 403]:
+                    retries += 1
+                    if retries > max_retries:
+                        raise
+                    retry_after = int(resp.headers.get('Retry-After', 0))
+                    sleep_time = backoff_factor * (2 ** (retries - 1)) + retry_after
+                    time.sleep(sleep_time)
+                else:
+                    raise
 
     def headers(self, method, url, **kwargs):
         resp = self.request(method, url, **kwargs)
@@ -329,8 +347,26 @@ class HttpxAsyncClient():
         """
         if 'timeout' not in kwargs:
             kwargs['timeout'] = self.timeout
-        resp = await self._async_client.request(method, self.base_url + url, **kwargs)
-        return resp.raise_for_status()
+
+        retries = 0
+        max_retries = 4
+        backoff_factor = 0.5
+
+        while retries <= max_retries:
+            try:
+                resp = await self._async_client.request(method, self.base_url + url, **kwargs)
+                resp.raise_for_status()
+                return resp
+            except httpx.HTTPStatusError as http_err:
+                if resp.status_code in [400, 401, 403]:
+                    retries += 1
+                    if retries > max_retries:
+                        raise
+                    retry_after = int(resp.headers.get('Retry-After', 0))
+                    sleep_time = backoff_factor * (2 ** (retries - 1)) + retry_after
+                    await asyncio.sleep(sleep_time)
+                else:
+                    raise
 
     async def headers(self, method: str, url: str, **kwargs: Any) -> httpx.Headers:
         resp = await self.request(method, url, **kwargs)
