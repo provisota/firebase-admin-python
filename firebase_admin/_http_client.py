@@ -46,7 +46,6 @@ DEFAULT_RETRY_CONFIG = retry.Retry(
 DEFAULT_HTTPX_RETRY_CONFIG = HttpxRetry(
     max_retries=4, status_forcelist=[500, 503], backoff_factor=0.5)
 
-
 DEFAULT_TIMEOUT_SECONDS = 120
 
 METRICS_HEADERS = {
@@ -170,7 +169,7 @@ class GoogleAuthCredentialFlow(httpx.Auth):
     def __init__(self, credential: credentials.Credentials):
         self._credential = credential
         self._max_refresh_attempts = 2
-        self._refresh_status_codes = (401,)
+        self._refresh_status_codes = (401, 403, 400)
 
     def apply_auth_headers(
             self,

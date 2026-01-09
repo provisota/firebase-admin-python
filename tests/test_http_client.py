@@ -618,7 +618,8 @@ class TestGoogleAuthCredentialFlow:
 
         responses = [
             respx.MockResponse(401, http_version='HTTP/2', content='Auth error'),
-            respx.MockResponse(401, http_version='HTTP/2', content='Auth error'),
+            respx.MockResponse(400, http_version='HTTP/2', content='Auth error'),
+            respx.MockResponse(403, http_version='HTTP/2', content='Auth error'),
             respx.MockResponse(200, http_version='HTTP/2', content='body'),
         ]
         route = respx.request('POST', _TEST_URL).mock(side_effect=responses)
@@ -626,7 +627,7 @@ class TestGoogleAuthCredentialFlow:
         resp = await client.request('post', _TEST_URL)
         assert resp.status_code == 200
         assert resp.text == 'body'
-        assert route.call_count == 3
+        assert route.call_count == 4
 
         request = route.calls.last.request
         assert request.method == 'POST'
@@ -646,8 +647,9 @@ class TestGoogleAuthCredentialFlow:
 
         responses = [
             respx.MockResponse(401, http_version='HTTP/2', content='Auth error'),
-            respx.MockResponse(401, http_version='HTTP/2', content='Auth error'),
-            respx.MockResponse(401, http_version='HTTP/2', content='Auth error'),
+            respx.MockResponse(400, http_version='HTTP/2', content='Auth error'),
+            respx.MockResponse(403, http_version='HTTP/2', content='Auth error'),
+            respx.MockResponse(403, http_version='HTTP/2', content='Auth error'),
             # Should stop after previous response
             respx.MockResponse(200, http_version='HTTP/2', content='body'),
         ]
@@ -656,11 +658,11 @@ class TestGoogleAuthCredentialFlow:
         with pytest.raises(httpx.HTTPStatusError) as exc_info:
             resp = await client.request('post', _TEST_URL)
         resp = exc_info.value.response
-        assert resp.status_code == 401
+        assert resp.status_code == 403
         assert resp.text == 'Auth error'
-        assert route.call_count == 3
+        assert route.call_count == 4
 
-        assert mock_credential_patch.call_count == 3
+        assert mock_credential_patch.call_count == 4
 
         request = route.calls.last.request
         assert request.method == 'POST'
